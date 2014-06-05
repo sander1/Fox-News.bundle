@@ -1,8 +1,6 @@
-BASE_URL  = 'http://video.foxnews.com'
-NAV_URL   = BASE_URL + '/playlist/featured-latest-news/'
-VIDEO_URL = BASE_URL + '/v/%s'
-
 TITLE = 'Fox News'
+NEWS_CLIPS = 'http://video.foxnews.com/v/feed/page/news-clips.json'
+SHOW_CLIPS = 'http://video.foxnews.com/v/feed/page/show-clips.json'
 
 ###################################################################################################
 def Start():
@@ -11,69 +9,129 @@ def Start():
   HTTP.CacheTime = 1800
 
 ###################################################################################################
-@handler("/video/foxnews", TITLE)
+@handler('/video/foxnews', TITLE)
 def MainMenu():
 
   oc = ObjectContainer()
-  navpage = HTML.ElementFromURL(NAV_URL)
-
-  for category in navpage.xpath('//div[@class="browse"]//ul/li/a[contains(@href, "/playlist/")]/parent::li'):
-    title = category.xpath('./a')[0].text.strip()
-    playlist_id = category.xpath('./a/@href')[0].split('playlist/')[1][:-1]
-    oc.add(DirectoryObject(key=Callback(Shows, playlist_id=playlist_id, title=title), title=title))
-
-  oc.add(SearchDirectoryObject(identifier="com.plexapp.plugins.foxnews", title='Search', summary='Search Fox News Videos', prompt='Search:', thumb=R('search.png')))
+  oc.add(DirectoryObject(key=Callback(Sections, title='News Clips', type='news'), title='News Clips'))
+  oc.add(DirectoryObject(key=Callback(Sections, title='Show Clips', type='show'), title='Show Clips'))
+#  oc.add(SearchDirectoryObject(identifier='com.plexapp.plugins.foxnews', title='Search', summary='Search Fox News Videos', prompt='Search:', thumb=R('search.png')))
 
   return oc
 
 ###################################################################################################
-@route('/video/foxnews/shows/{playlist_id}')
-def Shows(playlist_id, title):
+@route('/video/foxnews/sections/{type}')
+def Sections(title, type):
 
-  oc = ObjectContainer(title2 = title)
-  playlist = HTML.ElementFromURL('%s/playlist/%s' % (BASE_URL , playlist_id))
-  Log("playlist=%s" % playlist);
- 
-  oc.add(DirectoryObject(key=Callback(Playlist, playlist_id=playlist_id, title="All "+title), title="All "+title))
+  oc = ObjectContainer(title2=title)
 
-  for item in playlist.xpath('//div[@id="shows"]//ul/li'):
-    new_playlist_id=item.xpath('./a/@href')[0].split('playlist/')[1][:-1]
-    new_title=item.xpath('./a')[0].text.strip()
-    oc.add(DirectoryObject(key=Callback(Playlist, playlist_id=new_playlist_id, title=new_title), title=new_title))
+  if type == 'news':
+    feed_url = NEWS_CLIPS
+  elif type == 'show':
+    feed_url = SHOW_CLIPS
 
-  if len(oc) == 1:
-    return Playlist(playlist_id,title);
-  else:
-    return oc
+  json_obj = JSON.ObjectFromURL(feed_url)
 
-###################################################################################################
-@route('/video/foxnews/playlist/{playlist_id}')
-def Playlist(playlist_id, title):
+  for section in json_obj['sub_sections']:
+    title = section['title']
+    feed_url = section['feed']
 
-  oc = ObjectContainer(title2 = title)
-  playlist = HTML.ElementFromURL('%s/playlist/%s' % (BASE_URL , playlist_id))
-
-  for item in playlist.xpath('//div[@id="playlist"]//ul/li/div/a[contains(@href, "?playlist_id=")]/parent::div/parent::li'):
-    title       = item.xpath('.//div[@class="info"]//a')[0].text.replace('&amp;', '&').strip()
-    description = item.xpath('.//div[@class="info"]/p/span')[0].text.replace('&amp;', '&')
-    duration    = item.xpath('.//div[@class="info"]/p/strong')[0].text
-    duration    = (int(duration.split(':')[0])*60 + int(duration.split(':')[1])) * 1000
-    date        = item.xpath('.//div[@class="info"]/time')[0].text
-    date        = Datetime.ParseDate(date)
-    thumb_url   = item.xpath('.//div[@class="m"]/a/img/@src')
-    url         = item.xpath('.//div[@class="m"]/a/@href')[0]
-    url         = 'http:' + url
-
-    oc.add(VideoClipObject(
-      url = url, 
-      title = title, 
-      summary = description, 
-      thumb=Resource.ContentsOfURLWithFallback(url=thumb_url),
-      duration = duration,
-      originally_available_at = date
+    oc.add(DirectoryObject(
+      key = Callback(Content, title=title, url=feed_url),
+      title = title
     ))
 
-  if len(oc) < 1:
-    return ObjectContainer('Empty', "There aren't any items")
-  else:
-    return oc
+  return oc
+
+###################################################################################################
+@route('/video/foxnews/content')
+def Content(title, url):
+
+  oc = ObjectContainer(title2=title)
+  json_obj = JSON.ObjectFromURL(url)
+
+  for content in json_obj['contents']:
+
+    if 'playlist' in content and 'feed' in content['playlist']:
+
+      title = content['title']
+      summary = content['description']
+      feed_url = content['playlist']['feed']
+
+      oc.add(DirectoryObject(
+        key = Callback(Playlist, title=title, url=feed_url),
+        title = title,
+        summary = summary
+      ))
+
+    elif 'show' in content:
+
+      id = content['show']['id']
+      title = content['show']['name']
+      summary = content['show']['description']
+
+      oc.add(DirectoryObject(
+        key = Callback(Show, id=id, title=title, url=url),
+        title = title,
+        summary = summary
+      ))
+
+    else:
+
+      continue
+
+  return oc
+
+###################################################################################################
+@route('/video/foxnews/show/{id}')
+def Show(id, title, url):
+
+  oc = ObjectContainer(title2=title)
+  json_obj = JSON.ObjectFromURL(url)
+
+  for content in json_obj['contents']:
+
+    if content['show']['id'] == id:
+
+      for playlist in content['show']['playlists']:
+
+        title = playlist['name']
+        summary = playlist['description']
+        feed_url = playlist['feed']
+
+        oc.add(DirectoryObject(
+          key = Callback(Playlist, title=title, url=feed_url),
+          title = title,
+          summary = summary
+        ))
+
+      break
+
+  return oc
+
+###################################################################################################
+@route('/video/foxnews/playlist')
+def Playlist(title, url):
+
+  oc = ObjectContainer(title2=title)
+  json_obj = JSON.ObjectFromURL(url)
+
+  for video in json_obj['channel']['item']:
+
+    title = video['title']
+    summary = video['media-content']['media-description']
+    thumb = video['media-content']['media-thumbnail']
+    duration = int(video['media-content']['mvn-duration']) * 1000
+    originally_available_at = Datetime.ParseDate(video['media-content']['mvn-airDate'])
+    id = video['media-content']['mvn-assetUUID']
+
+    oc.add(VideoClipObject(
+      url = 'http://video.foxnews.com/v/%s' % id,
+      title = title,
+      summary = summary,
+      thumb = Resource.ContentsOfURLWithFallback(url=thumb),
+      duration = duration,
+      originally_available_at = originally_available_at
+    ))
+
+  return oc
