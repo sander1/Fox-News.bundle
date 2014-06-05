@@ -15,7 +15,7 @@ def MainMenu():
   oc = ObjectContainer()
   oc.add(DirectoryObject(key=Callback(Sections, title='News Clips', type='news'), title='News Clips'))
   oc.add(DirectoryObject(key=Callback(Sections, title='Show Clips', type='show'), title='Show Clips'))
-#  oc.add(SearchDirectoryObject(identifier='com.plexapp.plugins.foxnews', title='Search', summary='Search Fox News Videos', prompt='Search:', thumb=R('search.png')))
+  oc.add(SearchDirectoryObject(identifier='com.plexapp.plugins.foxnews', title='Search', summary='Search Fox News Videos', prompt='Search:', thumb=R('search.png')))
 
   return oc
 

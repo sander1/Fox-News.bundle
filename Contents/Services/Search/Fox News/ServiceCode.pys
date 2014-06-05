@@ -1,44 +1,20 @@
 BASE_URL = 'http://video.foxnews.com'
-SEARCH_URL = BASE_URL + '/search/results?q=%s&sort=1&start=0'
+SEARCH_URL = '%s/search/results?q=%%s&sort=1&start=0' % BASE_URL
 
 ####################################################################################################
 def Search(query):
 
-  # Compute the URL and download the HTML
-  url = SEARCH_URL % String.Quote(query, usePlus=True)
-  search_page = HTML.ElementFromURL(url)
-  search_results = search_page.xpath("//ul[contains(@class, 'video-search-items')]/li")
+  oc = ObjectContainer(title1='Fox News', title2='Search Results')
+  html = HTML.ElementFromURL(SEARCH_URL % String.Quote(query, usePlus=True))
 
-  # Create a container to hold the results
-  oc = ObjectContainer()
+  for url in html.xpath('//h2/a[contains(@href, "/v/")]/@href')[:10]:
 
-  for item in search_results:  
+    if not url.startswith('http://'):
+      url = '%s%s' % (BASE_URL, url)
+
     try:
-
-      # Although we have explicitly requested to only search for videos, it's possible that other
-      # media types (such as pictures) have also been placed on the page. We should filter these
-      # simply using their urls.
-
-      itemurl = item.xpath("./div[@class='info']//a")[0].get('href')
-      if itemurl.startswith(BASE_URL) == False:
-        itemurl = BASE_URL + itemurl
-
-      # Extract the other details from the page
-      title = "".join(item.xpath("./div[@class='info']//a//text()")).strip()
-      thumb = item.xpath(".//img")[0].get('src')
-
-      description = None
-      try: description = "".join(info.xpath("./div[@class='info']//span//text()")).strip()
-      except: pass
-
-      oc.add(VideoClipObject(
-        url = itemurl,
-        title = title,
-        thumb = thumb,
-        summary = description
-      ))
-
+      oc.add(URLService.MetadataObjectForURL(url))
     except:
-      Log.Exception("Exception adding video result")
+      pass
 
   return oc
