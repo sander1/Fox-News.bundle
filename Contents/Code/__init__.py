@@ -93,7 +93,10 @@ def Show(id, title, url):
 
     if content['show']['id'] == id:
 
-      for playlist in content['show']['playlists']:
+      # If just 1 playlist, and not a list with playlists
+      if 'name' in content['show']['playlists']:
+
+        playlist = content['show']['playlists']
 
         title = playlist['name']
         summary = playlist['description']
@@ -104,6 +107,21 @@ def Show(id, title, url):
           title = title,
           summary = summary
         ))
+
+      # If multiple playlists
+      else:
+
+        for playlist in content['show']['playlists']:
+
+          title = playlist['name']
+          summary = playlist['description']
+          feed_url = playlist['feed']
+
+          oc.add(DirectoryObject(
+            key = Callback(Playlist, title=title, url=feed_url),
+            title = title,
+            summary = summary
+          ))
 
       break
 
