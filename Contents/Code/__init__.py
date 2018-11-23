@@ -132,6 +132,10 @@ def Show(id, title, url):
 def Playlist(title, url):
 
   oc = ObjectContainer(title2=title)
+
+  if url.endswith('.js'):
+    url = '%son' % (url)
+
   json_obj = JSON.ObjectFromURL(url)
 
   for video in json_obj['channel']['item']:
