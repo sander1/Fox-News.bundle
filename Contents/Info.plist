@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.plexapp.plugins.foxnews</string>
+	<string>sander1.plexplugins.foxnews</string>
 	<key>PlexClientPlatformExclusions</key>
 	<string>Roku</string>
 	<key>PlexClientPlatforms</key>
