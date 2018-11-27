@@ -6,7 +6,7 @@ SHOW_CLIPS = 'http://video.foxnews.com/v/feed/page/show-clips.json'
 def Start():
 
   ObjectContainer.title1 = TITLE
-  HTTP.CacheTime = 1800
+  HTTP.CacheTime = 300
 
 ###################################################################################################
 @handler('/video/foxnews', TITLE)
