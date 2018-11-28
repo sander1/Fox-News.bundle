@@ -1,4 +1,7 @@
 TITLE = 'Fox News'
+ART = 'art-default.jpg'
+ICON = 'icon-default.jpg'
+
 NEWS_CLIPS = 'http://video.foxnews.com/v/feed/page/news-clips.json'
 SHOW_CLIPS = 'http://video.foxnews.com/v/feed/page/show-clips.json'
 
@@ -6,10 +9,11 @@ SHOW_CLIPS = 'http://video.foxnews.com/v/feed/page/show-clips.json'
 def Start():
 
   ObjectContainer.title1 = TITLE
+  DirectoryObject.thumb = R(ICON)
   HTTP.CacheTime = 300
 
 ###################################################################################################
-@handler('/video/foxnews', TITLE)
+@handler('/video/foxnews', TITLE, art=ART, thumb=ICON)
 def MainMenu():
 
   oc = ObjectContainer()
@@ -150,7 +154,7 @@ def Playlist(title, url):
       url = 'http://video.foxnews.com/v/%s' % id,
       title = title,
       summary = summary,
-      thumb = Resource.ContentsOfURLWithFallback(url=thumb),
+      thumb = thumb,
       duration = duration,
       originally_available_at = originally_available_at
     ))
